@@ -19,6 +19,7 @@
 #include "status_leds.h"
 #include "INA226.h"
 #include "PWM_out.h"
+#include "stm32f0xx_tim.h"
 
 int main(void)
 {

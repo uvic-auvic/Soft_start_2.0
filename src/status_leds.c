@@ -5,7 +5,10 @@
 
 #include "status_leds.h"
 #include "stm32f0xx.h"
-
+#include "stm32f0xx_gpio.h"
+#include "stm32f0xx_rcc.h"
+#include "stm32f0xx_misc.h"
+#include "stm32f0xx_tim.h"
 // ----------------------------------------------------------------------------
 
 extern void blink_led_C8_C9_init()
