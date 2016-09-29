@@ -21,12 +21,42 @@
 #include "PWM_out.h"
 #include "stm32f0xx_tim.h"
 
+#include "FreeRTOS.h"
+#include "task.h"
+
+/* A few bytes might be lost to byte aligning the heap start address. */
+#define configADJUSTED_HEAP_SIZE	( configTOTAL_HEAP_SIZE - portBYTE_ALIGNMENT )
+
+/* Allocate the memory for the heap. */
+/* Allocate the memory for the heap. */
+#if( configAPPLICATION_ALLOCATED_HEAP == 1 )
+	/* The application writer has already defined the array used for the RTOS
+	heap - probably so it can be placed in a special segment or address. */
+	extern uint8_t ucHeap[ configTOTAL_HEAP_SIZE ];
+#else
+	static uint8_t ucHeap[ configTOTAL_HEAP_SIZE ];
+#endif /* configAPPLICATION_ALLOCATED_HEAP */
+
+static size_t xNextFreeByte = ( size_t ) 0;
+
+void vApplicationTickHook( void )
+{
+	/* This function will be called by each tick interrupt if
+	configUSE_TICK_HOOK is set to 1 in FreeRTOSConfig.h.  User code can be
+	added here, but the tick hook is called from an interrupt context, so
+	code must not attempt to block, and only the interrupt safe FreeRTOS API
+	functions can be used (those that end in FromISR()). */
+}
+/*-----------------------------------------------------------*/
+
+
 int main(void)
 {
+
 	//initialize stuff
 
 	blink_led_C8_C9_init();
-	timer16_it_config_48MHz_to_1Hz();
+	//timer16_it_config_48MHz_to_1Hz();
 
 	DAC_init();
 
@@ -55,8 +85,10 @@ int main(void)
 
 	//safety checks
 
+	vTaskInit();
 
 	//System boot
+	/*
 	slew_start(500);//input is in microseconds
 
 	set_volt_ptr();
@@ -67,15 +99,50 @@ int main(void)
 	}
 
 	exec_volt_read();
+	*/
+
 	//reconfigure
 
 
 	//System go
 
+	/* Start the kernel.  From here on, only tasks and interrupts will run. */
+	vTaskStartScheduler();
 
 	while(1){
 		FSM_do();
 	}
+}
+
+void blinkyTask(void *dummy){
+	while(1){
+		GPIOC->ODR ^= GPIO_ODR_9;
+		/* maintain LED3 status for 200ms */
+		vTaskDelay(200);
+	}
+}
+
+void blinkyTask_2(void *dummy){
+	while(1){
+		GPIOC->ODR ^= GPIO_ODR_8;
+		/* maintain LED3 status for 200ms */
+		vTaskDelay(400);
+	}
+}
+
+void vTaskInit(void){
+    xTaskCreate(blinkyTask,
+		(const signed char *)"blinkyTask",
+		configMINIMAL_STACK_SIZE,
+		NULL,                 /* pvParameters */
+		tskIDLE_PRIORITY + 1, /* uxPriority */
+		NULL                  /* pvCreatedTask */);
+    xTaskCreate(blinkyTask_2,
+    		(const signed char *)"blinkyTask_2",
+    		configMINIMAL_STACK_SIZE,
+    		NULL,                 /* pvParameters */
+    		tskIDLE_PRIORITY + 1, /* uxPriority */
+    		NULL                  /* pvCreatedTask */);
 }
 
 void TIM16_IRQHandler(void)//Once per second
