@@ -23,21 +23,10 @@
 
 #include "FreeRTOS.h"
 #include "task.h"
+#include "semphr.h"
 
-/* A few bytes might be lost to byte aligning the heap start address. */
-#define configADJUSTED_HEAP_SIZE	( configTOTAL_HEAP_SIZE - portBYTE_ALIGNMENT )
 
-/* Allocate the memory for the heap. */
-/* Allocate the memory for the heap. */
-#if( configAPPLICATION_ALLOCATED_HEAP == 1 )
-	/* The application writer has already defined the array used for the RTOS
-	heap - probably so it can be placed in a special segment or address. */
-	extern uint8_t ucHeap[ configTOTAL_HEAP_SIZE ];
-#else
-	static uint8_t ucHeap[ configTOTAL_HEAP_SIZE ];
-#endif /* configAPPLICATION_ALLOCATED_HEAP */
-
-static size_t xNextFreeByte = ( size_t ) 0;
+static SemaphoreHandle_t I2C_semaphore;
 
 void vApplicationTickHook( void )
 {
@@ -49,6 +38,11 @@ void vApplicationTickHook( void )
 }
 /*-----------------------------------------------------------*/
 
+void CreateSemaphores(void){
+	vSemaphoreCreateBinary( I2C_semaphore );
+	if(I2C_semaphore == NULL)
+		while(1);
+}
 
 int main(void)
 {
@@ -75,7 +69,7 @@ int main(void)
 
 	init_Si7006();
 
-	init_FSM();
+	//init_FSM();
 
 	Configure_GPIO_USART1();
 	Configure_USART1();
@@ -86,6 +80,7 @@ int main(void)
 	//safety checks
 
 	vTaskInit();
+	CreateSemaphores();
 
 	//System boot
 	/*
