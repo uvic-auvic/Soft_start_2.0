@@ -7,10 +7,17 @@
 #include "stm32f0xx.h"
 #include "I2C_controller.h"
 #include <string.h>
+#include "main.h"
+
+#include "FreeRTOS.h"
+#include "task.h"
+#include "semphr.h"
 
 //Local global variables
 void (*data_update_callback)(uint8_t);
 uint8_t (*data_to_send_update)(void);
+
+TaskHandle_t xTaskToNotify = NULL;
 
 extern void Configure_GPIO_I2C2(void)
 {
@@ -59,6 +66,11 @@ static void reset_possibly_set_config_options(){
 	I2C2->CR2 &= (~I2C_CR2_RD_WRN);
 }
 
+static void set_task_to_notify_handle(){
+	/* Store the handle of the calling task. */
+	xTaskToNotify = xTaskGetCurrentTaskHandle();
+}
+
 extern void I2C2_IRQHandler(void){
 	if((I2C2->ISR & I2C_ISR_TXIS) == I2C_ISR_TXIS){
 		I2C2->TXDR = data_to_send_update();
@@ -66,23 +78,38 @@ extern void I2C2_IRQHandler(void){
 	if((I2C2->ISR & I2C_ISR_RXNE) == I2C_ISR_RXNE){
 		data_update_callback(I2C2->RXDR);
 	}
+	if((I2C2->ISR & I2C_ISR_TC) == I2C_ISR_TC){
+		BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+		/* At this point xTaskToNotify should not be NULL as a transmission was
+		in progress. */
+		configASSERT( xTaskToNotify != NULL );
+
+		/* Notify the task that the transmission is complete. */
+		vTaskNotifyGiveFromISR( xTaskToNotify, &xHigherPriorityTaskWoken );
+		I2C2->CR2 |=  I2C_CR2_STOP;
+	}
 }
 
 extern void I2C2_send_message_no_cb(uint8_t message, uint8_t address, uint8_t bytes_to_send){
 	I2C2_set_address_and_byte_count(address, bytes_to_send);
 	I2C2->TXDR = message;
-	I2C2->CR1 &= (~I2C_CR1_RXIE);
-	I2C2->CR2 &= (~I2C_CR2_RD_WRN);
-	I2C2->CR2 |=  I2C_CR2_START;
+	reset_possibly_set_config_options();
+	set_task_to_notify_handle();
+	//I2C2->CR1 &= (~I2C_CR1_RXIE);
+	//I2C2->CR2 &= (~I2C_CR2_RD_WRN);
+	I2C2->CR1 |= I2C_CR1_TCIE;
+	I2C2->CR2 |= I2C_CR2_START;
 }
 
 extern void I2C2_send_message_with_cb(uint8_t address, uint8_t bytes_to_send, uint8_t (*callback_func)(void)){
 	I2C2_set_address_and_byte_count(address, bytes_to_send);
 	data_to_send_update = callback_func;
-	I2C2->CR1 &= (~I2C_CR1_RXIE);
-	I2C2->CR1 |= I2C_CR1_TXIE;
-	I2C2->CR2 &= (~I2C_CR2_RD_WRN);
-
+	//I2C2->CR1 &= (~I2C_CR1_RXIE);
+	I2C2->CR1 |= I2C_CR1_TXIE | I2C_CR1_TCIE;
+	//I2C2->CR2 &= (~I2C_CR2_RD_WRN);
+	reset_possibly_set_config_options();
+	set_task_to_notify_handle();
 	I2C2->TXDR = data_to_send_update();
 	I2C2->CR2 |=  I2C_CR2_START;
 }
@@ -90,7 +117,9 @@ extern void I2C2_send_message_with_cb(uint8_t address, uint8_t bytes_to_send, ui
 extern void I2C2_recv_message_with_cb(int address, int bytes_to_send, void (*callback_func)(uint8_t)){
 	I2C2_set_address_and_byte_count(address, bytes_to_send);
 	data_update_callback = callback_func;
-	I2C2->CR1 &= (~I2C_CR1_TXIE);
-	I2C2->CR1 |= I2C_CR1_RXIE;
+	//I2C2->CR1 &= (~I2C_CR1_TXIE);
+	reset_possibly_set_config_options();
+	set_task_to_notify_handle();
+	I2C2->CR1 |= I2C_CR1_RXIE | I2C_CR1_TCIE;
 	I2C2->CR2 |= I2C_CR2_RD_WRN | I2C_CR2_START;
 }
