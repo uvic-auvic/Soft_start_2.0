@@ -10,6 +10,7 @@
 
 // Data Variables
 float current_temperature;
+float current_humidity;
 
 //Management Variables to help with the movement of data
 uint8_t MSB;
@@ -17,17 +18,13 @@ uint8_t LSB;
 bool MSB_written_to;
 bool LSB_written_to;
 
-bool Si7006_curr_running_task;
-bool Si7006_recently_finish_task;
+static uint8_t Si7006_ptr;
 
 static void reset_Si7006_managment_vars(){
 	MSB = 0;
 	LSB = 0;
 	MSB_written_to = false;
 	LSB_written_to = false;
-
-	Si7006_curr_running_task = false;
-	Si7006_recently_finish_task  = false;
 }
 
 static void append_Si7006_buffer(uint8_t data){
@@ -53,6 +50,11 @@ static void do_temp_update(){
 	current_temperature = TEMP_CONVERSION(temp);
 }
 
+static void do_humidity_update(){
+	uint16_t humidity = MSB << 8 | LSB;
+	current_humidity = HUMIDTY_CONVERSION(humidity);
+}
+
 extern void temp_update(uint8_t temp){
 	append_Si7006_buffer(temp);
 	if(is_Si7006_buffer_full() == true){
@@ -60,36 +62,49 @@ extern void temp_update(uint8_t temp){
 	}
 }
 
-extern void set_temp_read(){
-	reset_Si7006_managment_vars();
-	I2C2_send_message_no_cb(SI7006_TEMP_READ_COMM, Humidty_sensor, SI7006_TEMP_READ_COMM_BYTES);
+extern void humidty_update(uint8_t humidity){
+	append_Si7006_buffer(humidity);
+	if(is_Si7006_buffer_full() == true){
+		do_humidity_update();
+	}
 }
 
-extern void exec_temp_read(){
+extern void Si700X_set_temp_read_over_I2C(){
+	reset_Si7006_managment_vars();
+	Si7006_ptr = Si7006_temp_read;
+	I2C2_send_message_no_cb(Si7006_ptr, Humidty_sensor, SI7006_TEMP_READ_COMM_BYTES);
+}
+
+extern void Si700X_exec_temp_read_over_I2C(){
+	reset_Si7006_managment_vars();
 	I2C2_recv_message_with_cb(Humidty_sensor, SI7006_TEMP_READ_DATA_BYTES, temp_update);
+}
+
+extern void Si700X_set_humidity_read_over_I2C(){
+	reset_Si7006_managment_vars();
+	Si7006_ptr = SI7006_humidity_read;
+	I2C2_send_message_no_cb(Si7006_ptr, Humidty_sensor, SI7006_HUMIDTY_READ_COMM_BYTES);
+}
+
+extern void Si700X_exec_humidty_read_over_I2C(){
+	reset_Si7006_managment_vars();
+	I2C2_recv_message_with_cb(Humidty_sensor, SI7006_HUMIDTY_DATA_COMM_BYTES, humidty_update);
 }
 
 extern void init_Si7006(){
 	reset_Si7006_managment_vars();
 	current_temperature = 0;
+	Si7006_ptr = 0;
 }
 
 extern float Si7006_get_temp(){
 	return current_temperature;
 }
 
-extern bool Si7006_in_progress(){
-	return false;
-}
-
-extern bool Si7006_is_task_done_and_offer_resources(Si7006_tasks task){
-	switch(task){
-	case Si7006_temp_read:
-		break;
-	}
-	return false;
-}
-
 extern void Si7006_do_temp_read(){
 
+}
+
+extern bool Si7006_check_ready_for(Si7006_tasks task){
+	return (Si7006_ptr == task);
 }

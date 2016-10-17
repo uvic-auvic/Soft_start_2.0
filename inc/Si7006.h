@@ -11,14 +11,18 @@
 #include "stm32f0xx.h"
 #include <stdbool.h>
 
-#define SI7006_TEMP_READ_COMM  		(0xF3)
-#define SI7006_TEMP_READ_COMM_BYTES (1)
-#define SI7006_TEMP_READ_DATA_BYTES (2)
+#define SI7006_TEMP_READ_COMM  				(0xF3)
+#define SI7006_TEMP_READ_COMM_BYTES 		(1)
+#define SI7006_TEMP_READ_DATA_BYTES 		(2)
+#define SI7006_HUMIDTY_READ_COMM_BYTES 		(1)
+#define SI7006_HUMIDTY_DATA_COMM_BYTES		(2)
 
-#define TEMP_CONVERSION(x) ((175.72*(x)/65536)-46.85)
+#define TEMP_CONVERSION(x) 		((175.72*(x)/65536)-46.85)
+#define HUMIDTY_CONVERSION(x) 	((125*(x)/65536)-6)
 
 typedef enum{
-	Si7006_temp_read
+	Si7006_temp_read = 0xF3,
+	SI7006_humidity_read = 0xF5
 } Si7006_tasks;
 
 //Public functions used by driver
@@ -39,13 +43,16 @@ extern void temp_update(uint8_t temp);
   * @note   This function is only used as a convenient way to interact with the I2C driver
   * @retval None
   */
-extern void set_temp_read();
 
-
-extern void exec_temp_read();
 extern void init_Si7006();
 extern float Si7006_get_temp();
-extern bool Si7006_in_progress();
 extern bool Si7006_is_task_done_and_offer_resources(Si7006_tasks task);
+extern bool Si7006_check_ready_for(Si7006_tasks task);
+
+extern void Si700X_set_temp_read_over_I2C();
+extern void Si700X_exec_temp_read_over_I2C();
+
+extern void Si700X_set_humidity_read_over_I2C();
+extern void Si700X_exec_humidty_read_over_I2C();
 
 #endif /* SI7006_H_ */
