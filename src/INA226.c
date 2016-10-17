@@ -12,7 +12,8 @@
 
 #define INT_TO_VOLT_RATIO_USING_FLOAT	(0.00125)
 
-float most_recent_voltage;
+float most_recent_voltage_batteries;
+float most_recent_voltage_fets;
 float most_recent_curr_1;
 float most_recent_curr_2;
 
@@ -47,7 +48,7 @@ static bool is_INA226_buffer_full(){
 
 static void do_volt_update(){
 	int volt = MSB<<8 | LSB;
-	most_recent_voltage = (float)volt * INT_TO_VOLT_RATIO_USING_FLOAT;
+	most_recent_voltage_batteries = (float)volt * INT_TO_VOLT_RATIO_USING_FLOAT;
 }
 
 extern void volt_update(uint8_t volt){
@@ -68,11 +69,12 @@ extern void exec_volt_read(){
 
 extern void init_INA226(){
 	empty_INA226_buffer();
-	most_recent_voltage = 0;
+	most_recent_voltage_batteries = 0;
+	most_recent_voltage_fets = 0;
 	most_recent_curr_1 = 0;
 	most_recent_curr_2 = 0;
 }
 
-extern float INA226_get_volt(){
-	return most_recent_voltage;
+extern float INA226_get_battery_voltage(){
+	return most_recent_voltage_batteries;
 }

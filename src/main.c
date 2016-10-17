@@ -68,9 +68,10 @@ int main(void)
 	blink_led_C8_C9_init();
 	//timer16_it_config_48MHz_to_1Hz();
 
-	/*
+
 	DAC_init();
 
+	/*
 	SetClockForADC();
 	SetClockForADC();
 	CalibrateADC();
@@ -183,6 +184,46 @@ void updateHumidity(void *dummy){
 	}
 }
 
+void humidityAndTemperatureUpdating(void *dummy){
+	static uint8_t humidity = 0;
+	while(1){
+		// Wait until we are able to take control of the I2C2 bus
+		while(xSemaphoreTake(I2C2_semaphore_control, (TickType_t) 1000) == pdFALSE);
+		//Delay to ensure that the I2C2 bus will not cause error
+		vTaskDelay(TEMPERATURE_DELAY_TIME_MS/10);
+
+		if(humidity){
+			//Set the temperature read
+			Si700X_set_humidity_read_over_I2C();
+		}else{
+			//Set the temperature read
+			Si700X_set_temp_read_over_I2C();
+		}
+
+		/* Block to wait for prvTask2() to notify this task. */
+		ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
+		vTaskDelay(TEMPERATURE_DELAY_TIME_MS/10);
+
+		if(humidity){
+			//Set the temperature read
+			Si700X_exec_humidty_read_over_I2C();
+		}else{
+			//Set the temperature read
+			Si700X_exec_temp_read_over_I2C();
+		}
+
+		//wait until this blocked tasks is released
+		ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
+
+		humidity = !humidity;
+		//We are now done with the I2C2 bus
+		//Release the I2C2 bus before sleeping
+		xSemaphoreGive(I2C2_semaphore_control);
+		//Delay the task until it's time to read again
+		vTaskDelay(TEMPERATURE_DELAY_TIME_MS*10);
+	}
+}
+
 void blinkyTask(void *dummy){
 	while(1){
 		GPIOC->ODR ^= GPIO_ODR_9;
@@ -198,18 +239,24 @@ void vTaskInit(void){
 		NULL,                 // pvParameters
 		tskIDLE_PRIORITY + 1, // uxPriority
 		NULL              ); // pvCreatedTask */
-    xTaskCreate(updateTemperature,
+    /*xTaskCreate(updateTemperature,
     		(const signed char *)"temperature",
     		configMINIMAL_STACK_SIZE * 2,
     		NULL,                 // pvParameters
     		tskIDLE_PRIORITY + 1, // uxPriority
     		NULL               );///* pvCreatedTask */
-    xTaskCreate(updateHumidity,
+    /*xTaskCreate(updateHumidity,
 			(const signed char *)"humidity",
 			configMINIMAL_STACK_SIZE * 2,
 			NULL,                 // pvParameters
 			tskIDLE_PRIORITY + 1, // uxPriority
 			NULL              );  // pvCreatedTask*/
+    xTaskCreate(humidityAndTemperatureUpdating,
+		(const signed char *)"humAndTemp",
+		configMINIMAL_STACK_SIZE * 2,
+		NULL,                 // pvParameters
+		tskIDLE_PRIORITY + 1, // uxPriority
+		NULL              );  // pvCreatedTask*/
 }
 
 void TIM16_IRQHandler(void)//Once per second
