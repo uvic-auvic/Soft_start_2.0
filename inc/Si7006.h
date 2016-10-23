@@ -44,10 +44,9 @@ extern void temp_update(uint8_t temp);
   * @retval None
   */
 
-extern void init_Si7006();
-extern float Si7006_get_temp();
-extern bool Si7006_is_task_done_and_offer_resources(Si7006_tasks task);
-extern bool Si7006_check_ready_for(Si7006_tasks task);
+extern void init_Si700X();
+extern float Si700X_get_temp();
+extern int Si700X_get_humidty();
 
 extern void Si700X_set_temp_read_over_I2C();
 extern void Si700X_exec_temp_read_over_I2C();
