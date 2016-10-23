@@ -91,18 +91,18 @@ extern void Si700X_exec_humidty_read_over_I2C(){
 	I2C2_recv_message_with_cb(Humidty_sensor, SI7006_HUMIDTY_DATA_COMM_BYTES, humidty_update);
 }
 
-extern void init_Si7006(){
+extern void init_Si700X(){
 	reset_Si7006_managment_vars();
 	current_temperature = 0;
 	Si7006_ptr = 0;
 }
 
-extern float Si7006_get_temp(){
+extern float Si700X_get_temp(){
 	return current_temperature;
 }
 
-extern void Si7006_do_temp_read(){
-
+extern int Si700X_get_humidty(){
+	return (int)current_humidity;
 }
 
 extern bool Si7006_check_ready_for(Si7006_tasks task){

@@ -86,7 +86,7 @@ int main(void)
 	Configure_GPIO_I2C2();
 	Configure_I2C2_Master();
 
-	init_Si7006();
+	init_Si700X();
 
 	//init_FSM();
 
