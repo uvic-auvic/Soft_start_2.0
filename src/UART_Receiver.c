@@ -110,10 +110,10 @@ static void new_char_recv(char chartoreceive){
 		// We don't want to use the \r, less to think about later with perfect strings
 		AppendToCommBuffer('\0');
 		if(curr_data_recv_idx < MIN_COMMAND_LENGTH){
-			Send_to_Odroid("tiny\r\n");
+			//Send_to_Odroid("tiny\r\n");
 		}else{
 			// curr_data_recv_idx + 1 because of how arrays work
-			command_recv(chars_recv, curr_data_recv_idx + 1);
+			//command_recv(chars_recv, curr_data_recv_idx + 1);
 		}
 		ResetCommBuffer();
 	}
@@ -121,7 +121,7 @@ static void new_char_recv(char chartoreceive){
 
 	//No need to check \n in the statement as it will be checked by the above statement
 	else if(curr_data_recv_idx == MAX_COMMAND_LENGTH){
-		Send_to_Odroid("long\r\n");
+		//Send_to_Odroid("long\r\n");
 		ResetCommBuffer();
 	}else{
 		AppendToCommBuffer(chartoreceive);

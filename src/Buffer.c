@@ -1,50 +1,69 @@
-/*Buffer - Linked List implementation*/
+/*Buffer - Circular Queue Implementation -STATIC VERSION*/
 
-#include "Buffer.h"
 #include <stdlib.h>
+#include "stm32f0xx.h"
+#include "Buffer.h"
 
-extern void Buffer_add(Buffer* b, char* str){
-	struct str_node* temp = (struct str_node*) malloc(sizeof(struct str_node));
-	strcpy(temp->data, str);
-	temp->next = NULL;
+extern void Buffer_add(Buffer* buff, char* str){
 
-	if(b->size == 0){
-		b->front = temp;
-		b->rear = temp;
-		b->size = b->size + 1;
-		return;
+
+
+			strcpy(buff->memmory[buff->index_to_load],str);
+			buff->index_to_load = ((buff->index_to_load)+1)%(BUFFER_TOTAL_SIZE);
+			buff->size++;
+
+
+
+
+	if(Buffer_full(buff) == 1){
+		while(1){
+			//BUFFER GOT FULL
+		}
 	}
-	b->rear->next = temp;
-	b->rear = temp;
-	b->size = b->size + 1;
 }
 
-// To DeBuffer an integer.
-//Pass in the address to ensure variable scope
-extern void Buffer_pop(Buffer* b, char* data) {
-	struct str_node* temp = b->front;
-	if(b->front == NULL) {
-		return;
+extern int Buffer_full(Buffer* buff){ //checks if buffer is full
+	int check = buff->full;
+	if(buff== BUFFER_TOTAL_SIZE){
+		check = 1;
 	}
-	strcpy(data, b->front->data);
-	if(b->front == b->rear) {
-		b->front = b->rear = NULL;
-	}
-	else {
-		b->front = b->front->next;
-	}
-	free(temp);
-	b->size = b->size -1;
+	else check = 0;
+	return check;
 }
 
-extern Buffer* Buffer_init(){
-	Buffer* b = (Buffer*) malloc(sizeof(Buffer));
-	b->size = 0;
-	b->front = NULL;
-	b->rear = NULL;
-	return b;
+extern void Buffer_pop(Buffer* buff) {
+
+
+
+		strcpy(buff->popped,buff->memmory[buff->index_to_pop]);
+
+
+		buff->size--;
+		buff->index_to_pop = (buff->index_to_pop + 1)%(BUFFER_TOTAL_SIZE);
+
+
+
+	if(Buffer_full(buff) == 1){
+			while(1){
+				//BUFFER GOT FULL, doing nothing
+			}
+		}
+
+
 }
 
-extern int Buffer_size(Buffer* b){
-	return b->size;
+extern Buffer* Buffer_init(Buffer* buff){
+	buff->popped;
+	buff->size = 0;
+	buff->index_to_pop = 0;
+	buff->index_to_load = 0;
+	for(int j = 0; j<BUFFER_TOTAL_SIZE;j++){
+		for(int i = 0; i<BUFFER_MAX_DATA_SIZE;i++)
+			buff->memmory[j][i] = NULL;
+
+	}
+return buff;
 }
+
+
+
