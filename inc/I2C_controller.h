@@ -21,7 +21,8 @@ extern void Configure_I2C2_Master(void);
 
 typedef enum {
 	Humidty_sensor = 0b1000000,
-	Voltage_sensor = 0b1000101
+	power_IC_1 = 0b1000101,
+	power_IC_2 = 0b1001111
 } I2C_address;
 
 #endif /* I2C_CONTROLLER_H_ */

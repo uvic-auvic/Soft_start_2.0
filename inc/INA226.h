@@ -11,6 +11,7 @@
 #include "stm32f0xx.h"
 
 #define INA226_VOLT_PTR_ADDR  		(0x02)
+#define INA226_CURRENT_PTR_ADDR		(0x04)
 #define INA226_VOLT_PTR_ADDR_BYTES 	(1)
 #define INA226_VOLT_READ_DATA_BYTES (2)
 
