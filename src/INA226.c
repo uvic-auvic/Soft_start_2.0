@@ -58,13 +58,25 @@ extern void volt_update(uint8_t volt){
 	}
 }
 
+extern void current_1_update(uint8_t current){
+	append_INA226_buffer(current);
+	if(is_INA226_buffer_full() == true){
+		do_current_update();
+	}
+}
+
 extern void set_volt_ptr(){
 	empty_INA226_buffer();
-	I2C2_send_message_no_cb(INA226_VOLT_PTR_ADDR, Voltage_sensor, INA226_VOLT_PTR_ADDR_BYTES);
+	I2C2_send_message_no_cb(INA226_VOLT_PTR_ADDR, power_IC_1, INA226_VOLT_PTR_ADDR_BYTES);
 }
 
 extern void exec_volt_read(){
-	I2C2_recv_message_with_cb(Voltage_sensor, INA226_VOLT_READ_DATA_BYTES, volt_update);
+	I2C2_recv_message_with_cb(power_IC_1, INA226_VOLT_READ_DATA_BYTES, volt_update);
+}
+
+extern void set_battery_1_current_read(){
+	empty_INA226_buffer();
+	I2C2_send_message_no_cb(INA226_CURRENT_PTR_ADDR, power_IC_1, INA226_VOLT_PTR_ADDR_BYTES);
 }
 
 extern void init_INA226(){
