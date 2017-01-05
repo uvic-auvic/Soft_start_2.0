@@ -12,7 +12,7 @@ extern void DAC_init(){
 	DAC->DHR12R1 = 0x000;
 }
 
-extern void DAC_change_milli_volt(int mV){
+extern void DAC_change_milli_volt(uint16_t mV){
 	//milli volts to 12 bit is mV * 1.365
 	mV = (mV * MILLIVOLTS_TO_12BIT_CONVERSION_NUMER) / MILLIVOLTS_TO_12BIT_CONVERSION_DENOM;
 	if(mV > 0xFFF){

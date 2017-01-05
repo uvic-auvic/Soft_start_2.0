@@ -11,6 +11,7 @@
 #include <stdbool.h>
 
 #define INT_TO_VOLT_RATIO_USING_FLOAT	(0.00125)
+#define INT_TO_CURR_RATIO_USING_FLOAT	(0.00833)
 
 float most_recent_voltage_batteries;
 float most_recent_voltage_fets;
@@ -46,37 +47,72 @@ static bool is_INA226_buffer_full(){
 	return true;
 }
 
-static void do_volt_update(){
+static float do_volt_update(){
 	int volt = MSB<<8 | LSB;
-	most_recent_voltage_batteries = (float)volt * INT_TO_VOLT_RATIO_USING_FLOAT;
+	return (float)volt * INT_TO_VOLT_RATIO_USING_FLOAT;
 }
 
-extern void volt_update(uint8_t volt){
+static float do_curr_update(){
+	uint16_t val = MSB<<8 | LSB;
+	return ((val&0x7F) * INT_TO_CURR_RATIO_USING_FLOAT) * ((val&0x80)>>8);
+}
+
+extern void fet_volt_update(uint8_t volt){
 	append_INA226_buffer(volt);
 	if(is_INA226_buffer_full() == true){
-		do_volt_update();
+		most_recent_voltage_fets = do_volt_update();
 	}
 }
 
-extern void current_1_update(uint8_t current){
-	append_INA226_buffer(current);
+extern void bat_volt_update(uint8_t volt){
+	append_INA226_buffer(volt);
 	if(is_INA226_buffer_full() == true){
-		do_current_update();
+		most_recent_voltage_batteries = do_volt_update();
 	}
 }
 
-extern void set_volt_ptr(){
-	empty_INA226_buffer();
-	I2C2_send_message_no_cb(INA226_VOLT_PTR_ADDR, power_IC_1, INA226_VOLT_PTR_ADDR_BYTES);
+extern void curr1_update(uint8_t curr){
+	append_INA226_buffer(curr);
+	if(is_INA226_buffer_full() == true){
+		most_recent_curr_1 = do_curr_update();
+	}
 }
 
-extern void exec_volt_read(){
-	I2C2_recv_message_with_cb(power_IC_1, INA226_VOLT_READ_DATA_BYTES, volt_update);
+extern void curr2_update(uint8_t curr){
+	append_INA226_buffer(curr);
+	if(is_INA226_buffer_full() == true){
+		most_recent_curr_2 = do_curr_update();
+	}
 }
 
-extern void set_battery_1_current_read(){
+extern void INA226_set_volt_ptr(uint8_t address){
 	empty_INA226_buffer();
-	I2C2_send_message_no_cb(INA226_CURRENT_PTR_ADDR, power_IC_1, INA226_VOLT_PTR_ADDR_BYTES);
+	I2C2_send_message_no_cb(INA226_volt_read, address, INA226_VOLT_PTR_ADDR_BYTES);
+}
+
+extern void INA226_set_curr_ptr(uint8_t address){
+	empty_INA226_buffer();
+	I2C2_send_message_no_cb(INA226_curr_read, address, INA226_CURR_PTR_ADDR_BYTES);
+}
+
+extern void INA226_exec_volt_read(uint8_t address){
+	if(address == FET_Voltage_sensor)
+		I2C2_recv_message_with_cb(FET_Voltage_sensor, INA226_VOLT_READ_DATA_BYTES, fet_volt_update);
+	else if(address == Bat_Voltage_sensor)
+		I2C2_recv_message_with_cb(Bat_Voltage_sensor, INA226_VOLT_READ_DATA_BYTES, bat_volt_update);
+	else{
+		while(1);
+	}
+}
+
+extern void INA226_exec_curr_read(uint8_t address){
+	if(address == FET_Voltage_sensor)
+		I2C2_recv_message_with_cb(FET_Voltage_sensor, INA226_CURR_READ_DATA_BYTES, curr1_update);
+	else if(address == Bat_Voltage_sensor)
+		I2C2_recv_message_with_cb(Bat_Voltage_sensor, INA226_CURR_READ_DATA_BYTES, curr2_update);
+	else{
+		while(1);
+	}
 }
 
 extern void init_INA226(){
