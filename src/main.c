@@ -22,6 +22,7 @@
 #include "INA226.h"
 #include "PWM_out.h"
 #include "stm32f0xx_tim.h"
+#include "Buffer.h"
 
 #include "FreeRTOS.h"
 #include "task.h"
@@ -34,12 +35,6 @@
  */
 static SemaphoreHandle_t I2C2_semaphore_control;
 
-/*
- * I2C2_semaphore_using is used by tasks to keep track of when they are done with
- * bus. The I2C2 controller can be configured with a call back that can be
- * configured to give signals to tasks that are waiting or using the I2C2 bus
- */
-static SemaphoreHandle_t I2C2_semaphore_using;
 
 void vApplicationTickHook( void )
 {
@@ -63,8 +58,6 @@ void CreateSemaphores(void){
 int main(void)
 {
 
-	//initialize stuff
-
 	blink_led_C8_C9_init();
 	//timer16_it_config_48MHz_to_1Hz();
 
@@ -81,42 +74,29 @@ int main(void)
 	ADC1->CR |= ADC_CR_ADSTART;
 	*/
 
-
+	timer1_A7_A8_config();
 
 	Configure_GPIO_I2C2();
 	Configure_I2C2_Master();
 
 	init_Si700X();
 
+	init_INA226();
+
 	//init_FSM();
+
 
 	//Configure_GPIO_USART1();
 	//Configure_USART1();
 
-	//timer1_A7_A8_config();
-
-
 	//safety checks
 
-	vTaskInit();
+	vBootTaskInit();
 	CreateSemaphores();
 
 	//System boot
-	/*
-	slew_start(500);//input is in microseconds
-
-	set_volt_ptr();
-
-	int temp_timer = 0;
-	while(temp_timer < 48000000){
-		temp_timer++;
-	}
-
-	exec_volt_read();
-	*/
 
 	//reconfigure
-
 
 	//System go
 
@@ -129,131 +109,167 @@ int main(void)
 
 
 
-void updateTemperature(void *dummy){
-	while(1){
-		// Wait until we are able to take control of the I2C2 bus
-		while( xSemaphoreTake(I2C2_semaphore_control, (TickType_t) 1000) == pdFALSE);
-		//Delay to ensure that the I2C2 bus will not cause error
-		vTaskDelay(TEMPERATURE_DELAY_TIME_MS/10);
-		//Check to make sure we are configured to read the temperature
-		if(Si7006_check_ready_for(Si7006_temp_read) == false){
-			//Set the temperature read
-			Si700X_set_temp_read_over_I2C();
-			/* Block to wait for I2C2 to notify this task. */
-			ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
-			vTaskDelay(TEMPERATURE_DELAY_TIME_MS/10);
-		}
-		//Now that we know the system is configured correctly execute temperature read
-		Si700X_exec_temp_read_over_I2C();
-		//wait until this blocked tasks is released
-		ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
+void bootUpSeq(void *dummy){
+	//inital boot delay
+	vTaskDelay(200/portTICK_PERIOD_MS);
 
-		//We are now done with the I2C2 bus
-		//Release the I2C2 bus before sleeping
-		xSemaphoreGive(I2C2_semaphore_control);
-		//Delay the task until it's time to read again
-		vTaskDelay(TEMPERATURE_DELAY_TIME_MS*10);
+	//Start the slew start
+	static uint16_t dac_mv = 0;
+	while(1){
+		while(dac_mv < 3300){
+			dac_mv += 100;
+			DAC_change_milli_volt(dac_mv);
+			vTaskDelay(10/portTICK_PERIOD_MS);
+		}
+		vGeneralTaskInit();
+		vTaskDelete(NULL);
 	}
 }
 
-void updateHumidity(void *dummy){
+void updateSI700X(void *dummy){
+	enum {
+		Humidity,
+		Temperature,
+		update_item_size
+	};
+
+	static uint8_t next_update = Humidity;
+
 	while(1){
 		// Wait until we are able to take control of the I2C2 bus
 		while(xSemaphoreTake(I2C2_semaphore_control, (TickType_t) 1000) == pdFALSE);
 		//Delay to ensure that the I2C2 bus will not cause error
 		vTaskDelay(TEMPERATURE_DELAY_TIME_MS/10);
 		//Check to make sure we are configured to read the temperature
-		if(Si7006_check_ready_for(SI7006_humidity_read) == false){
+
+		if(next_update == Humidity){
 			//Set the temperature read
-			Si700X_set_humidity_read_over_I2C();
-			//Si700X_set_temp_read_over_I2C();
-			/* Block to wait for prvTask2() to notify this task. */
-			ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
-			vTaskDelay(TEMPERATURE_DELAY_TIME_MS/10);
-		}
-		//Now that we know the system is configured correctly execute temperature read
-		Si700X_exec_humidty_read_over_I2C();
-		//wait until this blocked tasks is released
-		ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
-
-		//We are now done with the I2C2 bus
-		//Release the I2C2 bus before sleeping
-		xSemaphoreGive(I2C2_semaphore_control);
-		//Delay the task until it's time to read again
-		vTaskDelay(TEMPERATURE_DELAY_TIME_MS*10);
-	}
-}
-
-void humidityAndTemperatureUpdating(void *dummy){
-	static uint8_t humidity = 0;
-	while(1){
-		// Wait until we are able to take control of the I2C2 bus
-		while(xSemaphoreTake(I2C2_semaphore_control, (TickType_t) 1000) == pdFALSE);
-		//Delay to ensure that the I2C2 bus will not cause error
-		vTaskDelay(TEMPERATURE_DELAY_TIME_MS/10);
-
-		if(humidity){
-			//Set the temperature read
-			Si700X_set_humidity_read_over_I2C();
+			//INA226_set_fet_volt_ptr();
 		}else{
-			//Set the temperature read
-			Si700X_set_temp_read_over_I2C();
+
 		}
 
+		//Si700X_set_temp_read_over_I2C();
 		/* Block to wait for prvTask2() to notify this task. */
 		ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
 		vTaskDelay(TEMPERATURE_DELAY_TIME_MS/10);
 
-		if(humidity){
+		//Now that we know the system is configured correctly execute temperature read
+		//INA226_exec_volt_read();
+		//wait until this blocked tasks is released
+		ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
+
+		//We are now done with the I2C2 bus
+		//Release the I2C2 bus before sleeping
+		xSemaphoreGive(I2C2_semaphore_control);
+		//Delay the task until it's time to read again
+		vTaskDelay(TEMPERATURE_DELAY_TIME_MS*5);
+	}
+}
+
+void secondTierUpdates(void *dummy){
+	//the last value must be the size!!!!!
+	enum{
+		humidity = 0,
+		temperature,
+		FET_volt,
+		Bat_volt,
+		Curr1,
+		Curr2,
+		update_item_size
+	};
+	static uint8_t updating_item = FET_volt;
+	while(1){
+		// Wait until we are able to take control of the I2C2 bus
+		while(xSemaphoreTake(I2C2_semaphore_control, (TickType_t) 1000) == pdFALSE);
+		//Delay to ensure that the I2C2 bus will not cause error
+		vTaskDelay(1/portTICK_PERIOD_MS);
+
+		if(updating_item == humidity){
+			//Set the temperature read
+			Si700X_set_humidity_read_over_I2C();
+		}else if(updating_item == temperature){
+			//Set the temperature read
+			Si700X_set_temp_read_over_I2C();
+		}else if(updating_item == FET_volt){
+			INA226_set_volt_ptr(FET_Voltage_sensor);
+		}else if(updating_item == Bat_volt){
+			INA226_set_volt_ptr(Bat_Voltage_sensor);
+		}else if(updating_item == Curr1){
+			INA226_set_curr_ptr(FET_Voltage_sensor);
+		}else if(updating_item == Curr2){
+			INA226_set_curr_ptr(Bat_Voltage_sensor);
+		}else{
+			while(1);
+		}
+
+		/* Block to wait for prvTask2() to notify this task. */
+		ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
+		vTaskDelay(1/portTICK_PERIOD_MS);
+
+		if(updating_item == humidity){
 			//Set the temperature read
 			Si700X_exec_humidty_read_over_I2C();
-		}else{
+		}else if(updating_item == temperature){
 			//Set the temperature read
 			Si700X_exec_temp_read_over_I2C();
+		}else if(updating_item == FET_volt){
+			INA226_exec_volt_read(FET_Voltage_sensor);
+		}else if(updating_item == Bat_volt){
+			INA226_exec_volt_read(Bat_Voltage_sensor);
+		}else if(updating_item == Curr1){
+			INA226_exec_curr_read(FET_Voltage_sensor);
+		}else if(updating_item == Curr2){
+			INA226_exec_curr_read(Bat_Voltage_sensor);
+		}else{
+			while(1);
 		}
 
 		//wait until this blocked tasks is released
 		ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
 
-		humidity = !humidity;
+		updating_item = ((updating_item + 1) % update_item_size);
 		//We are now done with the I2C2 bus
 		//Release the I2C2 bus before sleeping
 		xSemaphoreGive(I2C2_semaphore_control);
 		//Delay the task until it's time to read again
-		vTaskDelay(TEMPERATURE_DELAY_TIME_MS*10);
+		vTaskDelay(TEMPERATURE_DELAY_TIME_MS/portTICK_PERIOD_MS);
 	}
 }
 
 void blinkyTask(void *dummy){
 	while(1){
-		GPIOC->ODR ^= GPIO_ODR_9;
+		GPIOA->ODR ^= GPIO_ODR_3;
 		/* maintain LED3 status for 200ms */
 		vTaskDelay(500);
 	}
 }
 
-void vTaskInit(void){
+void vBootTaskInit(void){
+	xTaskCreate(bootUpSeq,
+		(const signed char *)"boot",
+		configMINIMAL_STACK_SIZE,
+		NULL,                 // pvParameters
+		tskIDLE_PRIORITY + 1, // uxPriority
+		NULL               );///* pvCreatedTask */
+}
+
+void vGeneralTaskInit(void){
     xTaskCreate(blinkyTask,
 		(const signed char *)"blinkyTask",
 		configMINIMAL_STACK_SIZE,
 		NULL,                 // pvParameters
 		tskIDLE_PRIORITY + 1, // uxPriority
 		NULL              ); // pvCreatedTask */
-    /*xTaskCreate(updateTemperature,
-    		(const signed char *)"temperature",
-    		configMINIMAL_STACK_SIZE * 2,
-    		NULL,                 // pvParameters
-    		tskIDLE_PRIORITY + 1, // uxPriority
-    		NULL               );///* pvCreatedTask */
-    /*xTaskCreate(updateHumidity,
-			(const signed char *)"humidity",
+    /*xTaskCreate(updateVoltages,
+			(const signed char *)"FetVoltage",
 			configMINIMAL_STACK_SIZE * 2,
 			NULL,                 // pvParameters
 			tskIDLE_PRIORITY + 1, // uxPriority
 			NULL              );  // pvCreatedTask*/
-    xTaskCreate(humidityAndTemperatureUpdating,
-		(const signed char *)"humAndTemp",
-		configMINIMAL_STACK_SIZE * 2,
+    xTaskCreate(secondTierUpdates,
+		(const signed char *)"tier_two",
+		configMINIMAL_STACK_SIZE,
 		NULL,                 // pvParameters
 		tskIDLE_PRIORITY + 1, // uxPriority
 		NULL              );  // pvCreatedTask*/

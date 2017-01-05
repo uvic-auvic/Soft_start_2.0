@@ -16,6 +16,7 @@
 #define SI7006_TEMP_READ_DATA_BYTES 		(2)
 #define SI7006_HUMIDTY_READ_COMM_BYTES 		(1)
 #define SI7006_HUMIDTY_DATA_COMM_BYTES		(2)
+#define SI700X_CONFIG_REG_SIZE				(1)
 
 #define TEMP_CONVERSION(x) 		((175.72*(x)/65536)-46.85)
 #define HUMIDTY_CONVERSION(x) 	((125*(x)/65536)-6)
@@ -24,6 +25,12 @@ typedef enum{
 	Si7006_temp_read = 0xF3,
 	SI7006_humidity_read = 0xF5
 } Si7006_tasks;
+
+#define SI700X_CONFIG_VBUSCT_520 		(0x00C0)
+#define SI700X_CONFIG_AVG_64			(0x0300)
+#define SI700X_CONFIG_VSHCT_520			(0x0018)
+
+#define SI700X_CONFIG_REG_VALUE 		(SI700X_CONFIG_VBUSCT_520 | SI700X_CONFIG_AVG_64 | SI700X_CONFIG_VSHCT_520)
 
 //Public functions used by driver
 
