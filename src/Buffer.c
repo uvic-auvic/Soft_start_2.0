@@ -32,9 +32,6 @@ extern void Buffer_pop(Buffer* buff) {
 	strcpy(buff -> memmory[buff -> index_to_pop],"\0");
 	buff -> index_to_pop = ((buff -> index_to_pop)+1)%(BUFFER_TOTAL_SIZE);
 	buff -> full--;
-	
-
-	printf("%s\n",buff -> popped);
 }
 
 extern void Buffer_init(Buffer* buff){
