@@ -29,6 +29,7 @@ extern void Buffer_pop(Buffer* buff, char* pop) {
 		while(1); //error when trying to remove when empty
 	}
 	strcpy(buff -> popped,buff -> memmory[buff -> index_to_pop]);
+	strcpy(pop,buff -> popped);
 	strcpy(buff -> memmory[buff -> index_to_pop],"\0");
 	buff -> index_to_pop = ((buff -> index_to_pop)+1)%(BUFFER_TOTAL_SIZE);
 	buff -> full--;
