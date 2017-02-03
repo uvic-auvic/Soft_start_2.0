@@ -24,7 +24,7 @@ extern bool Buffer_full(Buffer* buff){
 	}
 	return false;
 }
-extern void Buffer_pop(Buffer* buff) {
+extern void Buffer_pop(Buffer* buff, char* pop) {
 	if(buff -> full <= 0){
 		while(1); //error when trying to remove when empty
 	}
@@ -42,5 +42,3 @@ extern void Buffer_init(Buffer* buff){
 	buff -> index_to_load = 0;
 	buff -> full = 0;
 }
-
-
