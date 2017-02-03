@@ -14,10 +14,15 @@
  */
 extern void command_recv(char *comm, int comm_length);
 
+
+
+
 /*
  *
  */
 extern void init_FSM(void);
+
+extern void FSM_go(void);
 
 extern void FSM_do(void);
 

@@ -15,6 +15,7 @@ extern void Configure_GPIO_USART1(void);
 extern void Configure_USART1(void);
 extern void UART_push_out(char* mesg);
 extern int check_UART_busy(void);
+extern char* push_FSM(char* command);
 // ----------------------------------------------------------------------------
 
 /* Private function prototypes -----------------------------------------------

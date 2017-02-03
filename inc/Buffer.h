@@ -26,11 +26,11 @@ typedef struct Buffer{
 //Public functions ------------------------------
 
 extern void Buffer_add(Buffer* b, char* str);
-extern void Buffer_pop(Buffer* b);
-extern Buffer* Buffer_init();
+extern void Buffer_pop(Buffer* b, char* pop);
+extern void Buffer_init(Buffer* b);
+extern int Buffer_size(Buffer* b);
 
 
 //-----------------------------------------------
 
 #endif
- 
