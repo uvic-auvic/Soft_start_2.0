@@ -35,6 +35,11 @@ extern void Buffer_pop(Buffer* buff, char* pop) {
 	buff -> full--;
 }
 
+extern int Buffer_size(Buffer* buff){
+	return buff -> full;
+
+}
+
 extern void Buffer_init(Buffer* buff){
 	for(int i = 0; i < BUFFER_TOTAL_SIZE;i++){
 		strcpy(buff -> memmory[i],"\0");
