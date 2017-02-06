@@ -1,7 +1,8 @@
+
 /*Buffer - Circular Queue Implementation -STATIC VERSION*/
 
 #include <stdlib.h>
-//#include "stm32f0xx.h"
+#include "stm32f0xx.h"
 #include "Buffer.h"
 #include <stdio.h>
 #include <stdbool.h>
@@ -24,17 +25,20 @@ extern bool Buffer_full(Buffer* buff){
 	}
 	return false;
 }
-extern void Buffer_pop(Buffer* buff) {
+extern void Buffer_pop(Buffer* buff, char* pop) {
 	if(buff -> full <= 0){
 		while(1); //error when trying to remove when empty
 	}
 	strcpy(buff -> popped,buff -> memmory[buff -> index_to_pop]);
+	strcpy(pop,buff -> popped);
 	strcpy(buff -> memmory[buff -> index_to_pop],"\0");
 	buff -> index_to_pop = ((buff -> index_to_pop)+1)%(BUFFER_TOTAL_SIZE);
 	buff -> full--;
-	
+}
 
-	printf("%s\n",buff -> popped);
+extern int Buffer_size(Buffer* buff){
+	return buff -> full;
+
 }
 
 extern void Buffer_init(Buffer* buff){
@@ -45,31 +49,3 @@ extern void Buffer_init(Buffer* buff){
 	buff -> index_to_load = 0;
 	buff -> full = 0;
 }
-
-
-/*
-int main(){
-	char test[4] = {'a','b','c','\0'};
-	for(int i = 0; i < 4; i++){
-		printf("%c\n",test[i]);
-	}
-	
-	Buffer buff;
-	Buffer_init(&buff);
-	Buffer_add(&buff,"wasd");
-	Buffer_add(&buff,"1337");
-	Buffer_add(&buff,"b7o4");
-	Buffer_add(&buff,"b7o4");
-	Buffer_add(&buff,"b7o4");
-	
-	Buffer_pop(&buff);
-	Buffer_pop(&buff);
-	Buffer_pop(&buff);
-	Buffer_pop(&buff);
-	Buffer_pop(&buff);
-
-	
-	return 0;
-	
-}
-*/

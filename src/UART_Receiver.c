@@ -179,13 +179,27 @@ extern void UART_push_out(char* mesg){
 	strcpy(stringtosend, mesg);
 	/* start USART transmission */
 	USART1->TDR = next_char_to_push_out(); /* Will initialize TC if TXE */
+
 	return;
 }
 
 extern int check_UART_busy(){
 	return transfer_in_progress;
 }
+/*
+ * FSM Key Related Functions ----------------------------------------------------------------------------------------------
+ */
 
+extern char* push_FSM(char* command){
+	/*
+	 * Edit as need be to push commands to fsm
+	 */
+	command_recv(command,strlen(command));
+	return command;
+}
+
+
+// ---------------------------------------------------------------------------------------------------------------------------//
 /**
   * @}
   */
