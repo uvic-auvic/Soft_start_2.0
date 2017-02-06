@@ -24,16 +24,13 @@ typedef struct Buffer{
 	uint8_t size; //uint8_t
 	uint8_t index_to_pop;
 	int index_to_load;
-	int full;
 } Buffer;
 
 //Public functions ------------------------------
 
 extern void Buffer_add(Buffer* b, char* str);
-extern void Buffer_pop(Buffer* b, char* pop);
-extern void Buffer_init(Buffer* b);
-extern int Buffer_size(Buffer* b);
-
+extern void Buffer_pop(Buffer* b);
+extern void Buffer_init();
 
 
 //-----------------------------------------------

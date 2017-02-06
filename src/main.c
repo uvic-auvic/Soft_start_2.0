@@ -17,7 +17,8 @@
 #include "ADC_example.h"
 #include "I2C_controller.h"
 #include "Si7006.h"
-//#include "FSM.h"
+#include "FSM.h"
+#include "UART.h"
 #include "status_leds.h"
 #include "INA226.h"
 #include "PWM_out.h"
@@ -108,6 +109,20 @@ int main(void)
 	while(1);
 }
 
+void FSM(void *dummy){
+	//initialize the FSM
+	FSM_Init();
+	UART_init();
+	while(1){
+		//it's important that this is while, if the task is accidentally awaken it
+		//can't execute without having at least one item the input puffer
+		while(inputBuffer.size == 0){
+			//sleeps the task into it is notified to continue
+			ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
+		}
+		//Write a statement here to do a string comparison on commands
+	}
+}
 
 void bootUpSeq(void *dummy){
 	//inital boot delay

@@ -3,8 +3,13 @@
 // Copyright (c) 2014 Liviu Ionescu.
 //
 
-#include "UART_Receiver.h"
+#include "Buffer.h"
+
+#include "FreeRTOS.h"
+#include "Task.h"
+
 #include <string.h>
+#include <UART.h>
 
 //Definitions
 #define MIN_COMMAND_LENGTH (4)
@@ -13,6 +18,7 @@
 #define MAX_OUPUT_DATA (10)
 
 /* Private variables ---------------------------------------------------------*/
+TaskHandle_t UARTTaskToNotify = NULL;
 bool transfer_in_progress;
 uint8_t string_to_send_idx = 0;
 char stringtosend[MAX_OUPUT_DATA] = "\0";
@@ -104,6 +110,15 @@ __INLINE void Configure_USART1(void)
   transfer_in_progress = 0;
 }
 
+extern void UART_init(){
+	/* Store the handle of the calling task. */
+	UARTTaskToNotify = xTaskGetCurrentTaskHandle();
+
+	//initialize the UART driver
+	Configure_GPIO_USART1();
+	Configure_USART1();
+}
+
 static void new_char_recv(char chartoreceive){
 	// \n cases
 	if(chartoreceive=='\n' || chartoreceive == '\r'){
@@ -112,8 +127,17 @@ static void new_char_recv(char chartoreceive){
 		if(curr_data_recv_idx < MIN_COMMAND_LENGTH){
 			//Send_to_Odroid("tiny\r\n");
 		}else{
-			// curr_data_recv_idx + 1 because of how arrays work
-			//command_recv(chars_recv, curr_data_recv_idx + 1);
+			// Step 1 add to the input buffer
+			Buffer_add(&inputBuffer, chars_recv);
+
+			// Step 2 is notify the FSM task that the buffer is no longer empty
+			BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+			/* At this point xTaskToNotify should not be NULL as a transmission was
+			in progress. */
+			configASSERT( UARTTaskToNotify != NULL );
+
+			/* Notify the task that the transmission is complete. */
+			vTaskNotifyGiveFromISR( UARTTaskToNotify, &xHigherPriorityTaskWoken );
 		}
 		ResetCommBuffer();
 	}
@@ -179,27 +203,13 @@ extern void UART_push_out(char* mesg){
 	strcpy(stringtosend, mesg);
 	/* start USART transmission */
 	USART1->TDR = next_char_to_push_out(); /* Will initialize TC if TXE */
-
 	return;
 }
 
 extern int check_UART_busy(){
 	return transfer_in_progress;
 }
-/*
- * FSM Key Related Functions ----------------------------------------------------------------------------------------------
- */
 
-extern char* push_FSM(char* command){
-	/*
-	 * Edit as need be to push commands to fsm
-	 */
-	command_recv(command,strlen(command));
-	return command;
-}
-
-
-// ---------------------------------------------------------------------------------------------------------------------------//
 /**
   * @}
   */
