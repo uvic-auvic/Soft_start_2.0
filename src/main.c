@@ -187,10 +187,10 @@ void secondTierUpdates(void *dummy){
 
 		if(updating_item == humidity){
 			//Set the temperature read
-			Si700X_set_humidity_read_over_I2C();
+			//Si700X_set_humidity_read_over_I2C();
 		}else if(updating_item == temperature){
 			//Set the temperature read
-			Si700X_set_temp_read_over_I2C();
+			//Si700X_set_temp_read_over_I2C();
 		}else if(updating_item == FET_volt){
 			INA226_set_volt_ptr(FET_Voltage_sensor);
 		}else if(updating_item == Bat_volt){
@@ -209,10 +209,10 @@ void secondTierUpdates(void *dummy){
 
 		if(updating_item == humidity){
 			//Set the temperature read
-			Si700X_exec_humidty_read_over_I2C();
+			//Si700X_exec_humidty_read_over_I2C();
 		}else if(updating_item == temperature){
 			//Set the temperature read
-			Si700X_exec_temp_read_over_I2C();
+			//Si700X_exec_temp_read_over_I2C();
 		}else if(updating_item == FET_volt){
 			INA226_exec_volt_read(FET_Voltage_sensor);
 		}else if(updating_item == Bat_volt){
