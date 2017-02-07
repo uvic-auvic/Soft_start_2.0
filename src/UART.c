@@ -3,8 +3,14 @@
 // Copyright (c) 2014 Liviu Ionescu.
 //
 
-#include "UART_Receiver.h"
+#include "Buffer.h"
+
+#include "FreeRTOS.h"
+#include "Task.h"
+
 #include <string.h>
+#include <UART.h>
+#include <stdbool.h>
 
 //Definitions
 #define MIN_COMMAND_LENGTH (4)
@@ -13,27 +19,15 @@
 #define MAX_OUPUT_DATA (10)
 
 /* Private variables ---------------------------------------------------------*/
-bool transfer_in_progress;
-uint8_t string_to_send_idx = 0;
-char stringtosend[MAX_OUPUT_DATA] = "\0";
+TaskHandle_t UARTTaskToNotify = NULL;
 
-static bool more_chars_to_push_out(){
-	return string_to_send_idx == sizeof(stringtosend);
-}
-
-static char next_char_to_push_out(){
-	int next_char = stringtosend[string_to_send_idx];
-	string_to_send_idx++;
-	return next_char;
-}
-
-static void reset_ouput_buffer(){
-	transfer_in_progress = false;
-	string_to_send_idx =0;
-}
+bool output_transfer_in_progress;
+char stringtosend[MAX_OUPUT_DATA] = "";
 
 char chars_recv[MAX_COMMAND_LENGTH] = ""; //Using for storing the previous portion of the command
 int curr_data_recv_idx = 0; //Storing how far we are in to the current command
+
+Buffer outputBuffer;
 
 static void ResetCommBuffer(void){
 	int i=0;
@@ -57,7 +51,7 @@ static void AppendToCommBuffer(char data){
   * @param  None
   * @retval None
   */
-__INLINE void Configure_GPIO_USART1(void)
+static void Configure_GPIO_USART1(void)
 {
   /* Enable the peripheral clock of GPIOA */
   RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
@@ -76,7 +70,7 @@ __INLINE void Configure_GPIO_USART1(void)
   * @param  None
   * @retval None
   */
-__INLINE void Configure_USART1(void)
+static void Configure_USART1(void)
 {
   /* Enable the peripheral clock USART1 */
   RCC->APB2ENR |= RCC_APB2ENR_USART1EN;
@@ -100,8 +94,19 @@ __INLINE void Configure_USART1(void)
   /* (4) Enable USART1_IRQn */
   NVIC_SetPriority(USART1_IRQn, 0); /* (3) */
   NVIC_EnableIRQ(USART1_IRQn); /* (4) */
+}
 
-  transfer_in_progress = 0;
+extern void UART_init(){
+	/* Store the handle of the calling task. */
+	UARTTaskToNotify = xTaskGetCurrentTaskHandle();
+
+	output_transfer_in_progress = false;
+
+	Buffer_init(&outputBuffer);
+
+	//initialize the UART driver
+	Configure_GPIO_USART1();
+	Configure_USART1();
 }
 
 static void new_char_recv(char chartoreceive){
@@ -112,8 +117,16 @@ static void new_char_recv(char chartoreceive){
 		if(curr_data_recv_idx < MIN_COMMAND_LENGTH){
 			//Send_to_Odroid("tiny\r\n");
 		}else{
-			// curr_data_recv_idx + 1 because of how arrays work
-			//command_recv(chars_recv, curr_data_recv_idx + 1);
+			// Step 1 add to the input buffer
+			Buffer_add(&inputBuffer, chars_recv);
+
+			// Step 2 is notify the FSM task that the buffer is no longer empty
+			/* At this point xTaskToNotify should not be NULL as a transmission was
+			in progress. */
+			configASSERT( UARTTaskToNotify != NULL );
+
+			/* Notify the task that the transmission is complete. */
+			xTaskNotifyGive( UARTTaskToNotify );
 		}
 		ResetCommBuffer();
 	}
@@ -146,19 +159,31 @@ static void new_char_recv(char chartoreceive){
 void USART1_IRQHandler(void)
 {
   uint8_t chartoreceive = 0;
+  static uint8_t output_idx = 0;
+
 
   //Sending out the string
   if((USART1->ISR & USART_ISR_TC) == USART_ISR_TC)
     {
-      if(more_chars_to_push_out())
+	  //The reason why we update the output_idx before code is because this happens
+	  //after the first transfer is complete as the first transfer is loaded in else where
+	  output_idx++;
+      if(stringtosend[output_idx] == '\0')
       {
-    	  reset_ouput_buffer();
         USART1->ICR |= USART_ICR_TCCF; /* Clear transfer complete flag */
+        output_idx = 0;
+        //if the buffer is not empty pop the next item off and keep going
+        if(outputBuffer.size != 0){
+        	Buffer_pop(&outputBuffer, stringtosend);
+        	USART1->TDR = stringtosend[0]; /* Will initialize TC if TXE */
+        }else{
+        	output_transfer_in_progress = false;
+        }
       }
       else
       {
         /* clear transfer complete flag and fill TDR with a new char */
-        USART1->TDR = next_char_to_push_out();
+        USART1->TDR = stringtosend[output_idx];
       }
     }
 
@@ -174,32 +199,17 @@ void USART1_IRQHandler(void)
 }
 
 extern void UART_push_out(char* mesg){
-	transfer_in_progress = true;
-	string_to_send_idx = 0;
-	strcpy(stringtosend, mesg);
-	/* start USART transmission */
-	USART1->TDR = next_char_to_push_out(); /* Will initialize TC if TXE */
-
-	return;
+	if(output_transfer_in_progress){
+		Buffer_add(&outputBuffer, mesg);
+	}
+	else{
+		output_transfer_in_progress = true;
+		strcpy(stringtosend, mesg);
+		/* start USART transmission */
+		USART1->TDR = stringtosend[0]; /* Will initialize TC if TXE */
+	}
 }
 
-extern int check_UART_busy(){
-	return transfer_in_progress;
-}
-/*
- * FSM Key Related Functions ----------------------------------------------------------------------------------------------
- */
-
-extern char* push_FSM(char* command){
-	/*
-	 * Edit as need be to push commands to fsm
-	 */
-	command_recv(command,strlen(command));
-	return command;
-}
-
-
-// ---------------------------------------------------------------------------------------------------------------------------//
 /**
   * @}
   */

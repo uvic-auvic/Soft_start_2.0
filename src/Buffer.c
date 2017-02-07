@@ -1,51 +1,55 @@
+/*Buffer - Circular FIFO Buffer implementation*/
 
-/*Buffer - Circular Queue Implementation -STATIC VERSION*/
-
-#include <stdlib.h>
-#include "stm32f0xx.h"
 #include "Buffer.h"
-#include <stdio.h>
-#include <stdbool.h>
-#include <string.h>
+#include <stdlib.h>
 
+// Adds an element to the end of the queue
+//  - str (the element) must be NULL terminated ('\0') for strcpy
+extern void Buffer_add(Buffer* b, const char* str){
+	// Insert element
+	strcpy(b->data[b->idx_to_load], str);
+	b->idx_to_load++;
+	b->idx_to_load %= MAX_BUFFER_SIZE;
+	b->size++;
 
-
-extern void Buffer_add(Buffer* buff, char* str){
-	if(buff -> full >= BUFFER_TOTAL_SIZE){
-		while(1); //error loading into full
+	// Check if buffer is full
+	if(b->size > MAX_BUFFER_SIZE)
+	{
+		// Remove oldest element
+		b->idx_to_pop++;
+		b->idx_to_pop %= MAX_BUFFER_SIZE;
+		b->size--;
+		b->overflow_cnt++;
 	}
-	strcpy(buff -> memmory[buff -> index_to_load],str);
-	buff -> index_to_load = ((buff -> index_to_load)+1)%(BUFFER_TOTAL_SIZE);
-	buff -> full++;
 }
 
-extern bool Buffer_full(Buffer* buff){
-	if(buff -> full >= BUFFER_TOTAL_SIZE){
-		return true;
+// Removes an element from the front of the queue
+extern void Buffer_pop(Buffer* b, char* data) {
+	// Check if the buffer has anything to pop
+	if(b->size)
+	{
+		// Pop oldest element and store it in data
+		strcpy(data, b->data[b->idx_to_pop]);
+		b->idx_to_pop++;
+		b->idx_to_pop %= MAX_BUFFER_SIZE;
+		b->size--;
 	}
-	return false;
-}
-extern void Buffer_pop(Buffer* buff, char* pop) {
-	if(buff -> full <= 0){
-		while(1); //error when trying to remove when empty
-	}
-	strcpy(buff -> popped,buff -> memmory[buff -> index_to_pop]);
-	strcpy(pop,buff -> popped);
-	strcpy(buff -> memmory[buff -> index_to_pop],"\0");
-	buff -> index_to_pop = ((buff -> index_to_pop)+1)%(BUFFER_TOTAL_SIZE);
-	buff -> full--;
 }
 
-extern int Buffer_size(Buffer* buff){
-	return buff -> full;
-
+// Reset all variables of the buffer
+extern void Buffer_init(Buffer* b){
+	b->idx_to_load = 0;
+	b->idx_to_pop = 0;
+	b->size = 0;
+	b->overflow_cnt = 0;
 }
 
-extern void Buffer_init(Buffer* buff){
-	for(int i = 0; i < BUFFER_TOTAL_SIZE;i++){
-		strcpy(buff -> memmory[i],"\0");
-	}
-	buff -> index_to_pop = 0;
-	buff -> index_to_load = 0;
-	buff -> full = 0;
+// Get the size of the buffer
+extern int Buffer_size(Buffer* b){
+	return b->size;
+}
+
+// Get the number of overflows that have occurred
+extern int Buffer_overflow(Buffer* b){
+	return b->overflow_cnt;
 }
