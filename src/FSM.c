@@ -8,5 +8,5 @@
 #include "Buffer.h"
 
 void FSM_Init(){
-	Buffer_init(inputBuffer);
+	Buffer_init(&inputBuffer);
 }

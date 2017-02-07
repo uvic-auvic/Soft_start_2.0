@@ -1,37 +1,28 @@
 #ifndef BUFFER_H_
 #define BUFFER_H_
 
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
+#include<string.h>
+#include "stm32f0xx.h"
 
-//#include "stm32f0xx.h"
 
 #define MAX_BUFFER_DATA (8)
-
-
-
-#define BUFFER_TOTAL_SIZE (5)
-#define BUFFER_MAX_DATA_SIZE (5)
-#define index_load (0)
-#define index_pop (0)
-
+#define MAX_BUFFER_SIZE (8)
 
 typedef struct Buffer{
-
-	char memmory[BUFFER_TOTAL_SIZE][BUFFER_MAX_DATA_SIZE];
-	char popped[BUFFER_MAX_DATA_SIZE];
-	uint8_t size; //uint8_t
-	uint8_t index_to_pop;
-	int index_to_load;
-} Buffer;
+	char data[MAX_BUFFER_SIZE][MAX_BUFFER_DATA];
+	uint8_t idx_to_load; // Stores index where new element should go
+	uint8_t idx_to_pop; // Stores index of the next element to remove
+	uint8_t size; // Stores the number of elements in the buffer
+	uint8_t overflow_cnt; // Stores the number of buffer overflows
+}Buffer;
 
 //Public functions ------------------------------
 
-extern void Buffer_add(Buffer* b, char* str);
-extern void Buffer_pop(Buffer* b);
+extern void Buffer_add(Buffer* b, const char* str); // str must be \0 terminated
+extern void Buffer_pop(Buffer* b, char* data);
+extern int Buffer_size(Buffer* b);
+extern int Buffer_overflow(Buffer* b);
 extern void Buffer_init();
-
 
 //-----------------------------------------------
 

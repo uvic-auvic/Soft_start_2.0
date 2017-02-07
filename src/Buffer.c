@@ -1,72 +1,55 @@
-/*Buffer - Circular Queue Implementation -STATIC VERSION*/
+/*Buffer - Circular FIFO Buffer implementation*/
 
-#include <stdlib.h>
-//#include "stm32f0xx.h"
 #include "Buffer.h"
-#include <stdio.h>
-#include <stdbool.h>
-#include <string.h>
+#include <stdlib.h>
 
+// Adds an element to the end of the queue
+//  - str (the element) must be NULL terminated ('\0') for strcpy
+extern void Buffer_add(Buffer* b, const char* str){
+	// Insert element
+	strcpy(b->data[b->idx_to_load], str);
+	b->idx_to_load++;
+	b->idx_to_load %= MAX_BUFFER_SIZE;
+	b->size++;
 
-
-extern void Buffer_add(Buffer* buff, char* str){
-	if(buff -> size >= BUFFER_TOTAL_SIZE){
-		while(1); //error loading into full
+	// Check if buffer is full
+	if(b->size > MAX_BUFFER_SIZE)
+	{
+		// Remove oldest element
+		b->idx_to_pop++;
+		b->idx_to_pop %= MAX_BUFFER_SIZE;
+		b->size--;
+		b->overflow_cnt++;
 	}
-	strcpy(buff -> memmory[buff -> index_to_load],str);
-	buff -> index_to_load = ((buff -> index_to_load)+1)%(BUFFER_TOTAL_SIZE);
-	buff -> size++;
 }
 
-extern bool Buffer_full(Buffer* buff){
-	if(buff -> size >= BUFFER_TOTAL_SIZE){
-		return true;
+// Removes an element from the front of the queue
+extern void Buffer_pop(Buffer* b, char* data) {
+	// Check if the buffer has anything to pop
+	if(b->size)
+	{
+		// Pop oldest element and store it in data
+		strcpy(data, b->data[b->idx_to_pop]);
+		b->idx_to_pop++;
+		b->idx_to_pop %= MAX_BUFFER_SIZE;
+		b->size--;
 	}
-	return false;
-}
-extern void Buffer_pop(Buffer* buff) {
-	if(buff -> size <= 0){
-		while(1); //error when trying to remove when empty
-	}
-	strcpy(buff -> popped,buff -> memmory[buff -> index_to_pop]);
-	strcpy(buff -> memmory[buff -> index_to_pop],"\0");
-	buff -> index_to_pop = ((buff -> index_to_pop)+1)%(BUFFER_TOTAL_SIZE);
-	buff -> size--;
 }
 
-extern void Buffer_init(Buffer* buff){
-	for(int i = 0; i < BUFFER_TOTAL_SIZE;i++){
-		strcpy(buff -> memmory[i],"\0");
-	}
-	buff -> index_to_pop = 0;
-	buff -> index_to_load = 0;
-	buff -> size = 0;
+// Reset all variables of the buffer
+extern void Buffer_init(Buffer* b){
+	b->idx_to_load = 0;
+	b->idx_to_pop = 0;
+	b->size = 0;
+	b->overflow_cnt = 0;
 }
 
-
-/*
-int main(){
-	char test[4] = {'a','b','c','\0'};
-	for(int i = 0; i < 4; i++){
-		printf("%c\n",test[i]);
-	}
-	
-	Buffer buff;
-	Buffer_init(&buff);
-	Buffer_add(&buff,"wasd");
-	Buffer_add(&buff,"1337");
-	Buffer_add(&buff,"b7o4");
-	Buffer_add(&buff,"b7o4");
-	Buffer_add(&buff,"b7o4");
-	
-	Buffer_pop(&buff);
-	Buffer_pop(&buff);
-	Buffer_pop(&buff);
-	Buffer_pop(&buff);
-	Buffer_pop(&buff);
-
-	
-	return 0;
-	
+// Get the size of the buffer
+extern int Buffer_size(Buffer* b){
+	return b->size;
 }
-*/
+
+// Get the number of overflows that have occurred
+extern int Buffer_overflow(Buffer* b){
+	return b->overflow_cnt;
+}
