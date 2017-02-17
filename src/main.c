@@ -125,7 +125,7 @@ void bootUpSeq(void *dummy){
 	//Start the slew start
 	static uint16_t dac_mv = 0;
 	while(1){
-		while(dac_mv < 3300){
+		while(dac_mv < 2400){
 			dac_mv += 100;
 			DAC_change_milli_volt(dac_mv);
 			vTaskDelay(10/portTICK_PERIOD_MS);
@@ -208,6 +208,7 @@ void secondTierUpdates(void *dummy){
 void blinkyTask(void *dummy){
 	while(1){
 		GPIOA->ODR ^= GPIO_ODR_3;
+		GPIOC->ODR ^= GPIO_ODR_8;
 		/* maintain LED3 status for 200ms */
 		vTaskDelay(500);
 	}
@@ -225,11 +226,11 @@ void vBootTaskInit(void){
 void vGeneralTaskInit(void){
 	xTaskCreate(FSM,
 		(const signed char *)"FSM",
-		configMINIMAL_STACK_SIZE/2,
+		configMINIMAL_STACK_SIZE/100,
 		NULL,                 // pvParameters
 		tskIDLE_PRIORITY + 1, // uxPriority
 		NULL              ); // pvCreatedTask */
-    /*xTaskCreate(blinkyTask,
+    xTaskCreate(blinkyTask,
 		(const signed char *)"blinkyTask",
 		configMINIMAL_STACK_SIZE,
 		NULL,                 // pvParameters
