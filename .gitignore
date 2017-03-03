@@ -19,7 +19,7 @@
 *.so
 *.so.*
 *.dylib
-*.ld
+.ld
 *.d
 
 # Executables
