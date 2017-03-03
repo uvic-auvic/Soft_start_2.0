@@ -92,7 +92,7 @@ static void Configure_USART1(void)
   /* Configure IT */
   /* (3) Set priority for USART1_IRQn */
   /* (4) Enable USART1_IRQn */
-  NVIC_SetPriority(USART1_IRQn, 0); /* (3) */
+  NVIC_SetPriority(USART1_IRQn, 5); /* (3) */
   NVIC_EnableIRQ(USART1_IRQn); /* (4) */
 }
 

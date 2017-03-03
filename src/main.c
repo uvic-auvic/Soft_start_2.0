@@ -63,14 +63,14 @@ int main(void)
 
 	DAC_init();
 
-	timer1_A7_A8_config();
+	//timer1_A7_A8_config();
 
-	Configure_GPIO_I2C2();
-	Configure_I2C2_Master();
+	//Configure_GPIO_I2C2();
+	//Configure_I2C2_Master();
 
-	init_Si700X();
+	//init_Si700X();
 
-	init_INA226();
+	//init_INA226();
 
 	//safety checks
 
